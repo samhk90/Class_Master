@@ -33,12 +33,10 @@ classes = ["Class X", "Class Y", "Class Z"]
 time_slots = ["8:00 AM - 9:00 AM", "9:15 AM - 10:15 AM", "10:30 AM - 11:30 AM", "11:45 AM - 12:45 PM"]
 import random
 time_slots = [
-    "8:00 AM - 9:00 AM",
-    "9:15 AM - 10:15 AM",
-    "10:30 AM - 11:30 AM",
-    "11:45 AM - 12:45 PM",
+    "slot-1",
+    "slot-2",
 ]
-
+last_scheduled_slot = {teacher: None for teacher in teachers}
 # Create copies of teachers and subjects to avoid modifying the original lists
 available_teachers = teachers.copy()
 available_subjects = subjects.copy()
@@ -46,19 +44,52 @@ available_subjects = subjects.copy()
 # Create an empty timetable dictionary
 timetable = {}
 
-# Generate timetable using a basic scheduling algorithm for a week (5 days)
-for day in range(5):  # Assuming a 5-day work week
-    for slot in time_slots:
-        for _class in classes:
-            if available_teachers and available_subjects:
-                subject = random.choice(available_subjects)
-                teacher = subject_teacher_mapping[subject]  # Retrieve teacher from mapping
-                if teacher not in timetable:
-                    timetable[teacher] = []
-                timetable[teacher].append((day, slot, _class, subject))
-                # Remove the teacher and subject from available options to prevent double allocation
-                available_teachers.remove(teacher)
-                available_subjects.remove(subject)
+def generate_timetable(teachers, subjects, classes, time_slots, subject_teacher_mapping):
+    # Create copies of teachers and subjects to avoid modifying the original lists
+    available_teachers = teachers.copy()
+    available_subjects = subjects.copy()
+
+    # Create an empty timetable dictionary
+    timetable = {}
+
+    # Create a dictionary to store the last scheduled time slot for each teacher
+    last_scheduled_slot = {teacher: None for teacher in teachers}
+
+    # Generate timetable using a basic scheduling algorithm for a week (5 days)
+    for day in range(5):  # Assuming a 5-day work week
+        # Reset available_subjects at the beginning of each day
+        available_subjects = subjects.copy()
+
+        for slot in time_slots:
+            for _class in classes:
+                if available_teachers and available_subjects:
+                    subject = random.choice(available_subjects)
+                    teacher = subject_teacher_mapping[subject]  # Retrieve teacher from mapping
+                    if teacher not in timetable:
+                        timetable[teacher] = []
+
+                    # Find a time slot that is not immediately after the last scheduled slot
+                    while True:
+                        if (
+                            last_scheduled_slot[teacher] is None
+                            or slot != last_scheduled_slot[teacher]
+                        ):
+                            break
+                        slot = random.choice(time_slots)
+
+                    # Check for clashes before adding the entry to the timetable
+                    if not has_clashes(timetable, day, slot, teacher, _class, subject):
+                        timetable[teacher].append((day, slot, _class, subject))
+                        last_scheduled_slot[teacher] = slot
+
+                    # Remove the teacher and subject from available options to prevent double allocation
+                    if subject in available_subjects:
+                        available_subjects.remove(subject)
+
+    return timetable
+
+# Example usage:
+timetable = generate_timetable(teachers, subjects, classes, time_slots, subject_teacher_mapping)
 
 # Print the generated timetable for the week
 for teacher, schedule in timetable.items():
@@ -66,6 +97,10 @@ for teacher, schedule in timetable.items():
     for entry in schedule:
         day, slot, _class, subject = entry
         print(
-            f"Day {day+1}, Slot: {slot}, Class: {_class}, Subject: {subject}"
+            f"Day {day + 1}, Slot: {slot}, Class: {_class}, Subject: {subject}"
         )
-print(timetable)
+
+
+
+
+
